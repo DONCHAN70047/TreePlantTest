@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
 
-# Install Python packages from requirements.txt
-pip install -r requirements.txt
+# Install Node dependencies
+npm install
+
+# Install Python dependencies
+pip3 install -r requirements.txt
