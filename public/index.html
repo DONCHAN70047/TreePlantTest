@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>📸 Camera App</title>
+  <title>📸 Camera App with Switch</title>
   <style>
     body {
       text-align: center;
@@ -17,14 +17,21 @@
       border: 2px solid #444;
       border-radius: 10px;
     }
-    button {
+    button, select {
       padding: 10px 20px;
       font-size: 16px;
+      margin: 10px;
       cursor: pointer;
+      border-radius: 5px;
+      border: none;
+    }
+    button {
       background-color: #28a745;
       color: white;
-      border: none;
-      border-radius: 5px;
+    }
+    select {
+      background-color: #333;
+      color: white;
     }
     #output {
       margin-top: 20px;
@@ -37,6 +44,10 @@
 <body>
   <h1>📸 Camera App</h1>
   <video id="video" autoplay playsinline></video><br>
+
+  <label for="cameraSelect">Switch Camera:</label>
+  <select id="cameraSelect"></select><br>
+
   <button id="capture">Capture</button>
   <canvas id="canvas" style="display:none;"></canvas>
 
@@ -51,11 +62,53 @@
     const preview = document.getElementById('preview');
     const captureBtn = document.getElementById('capture');
     const outputDiv = document.getElementById('output');
+    const cameraSelect = document.getElementById('cameraSelect');
     const ctx = canvas.getContext('2d');
 
-    navigator.mediaDevices.getUserMedia({ video: true })
-      .then(stream => video.srcObject = stream)
-      .catch(err => console.error("Camera error:", err));
+    let currentStream;
+
+    function stopStreamedVideo(stream) {
+      if (stream) {
+        stream.getTracks().forEach(track => track.stop());
+      }
+    }
+
+    function startCamera(deviceId = null) {
+      const constraints = {
+        video: deviceId ? { deviceId: { exact: deviceId } } : { facingMode: 'user' }
+      };
+
+      navigator.mediaDevices.getUserMedia(constraints)
+        .then(stream => {
+          stopStreamedVideo(currentStream);
+          currentStream = stream;
+          video.srcObject = stream;
+        })
+        .catch(err => console.error("Camera error:", err));
+    }
+
+    // Get camera devices
+    navigator.mediaDevices.enumerateDevices().then(devices => {
+      const videoDevices = devices.filter(device => device.kind === 'videoinput');
+      cameraSelect.innerHTML = '';
+
+      videoDevices.forEach((device, index) => {
+        const option = document.createElement('option');
+        option.value = device.deviceId;
+        option.text = device.label || `Camera ${index + 1}`;
+        cameraSelect.appendChild(option);
+      });
+
+      if (videoDevices.length > 0) {
+        startCamera(videoDevices[0].deviceId);
+      }
+    });
+
+    // Switch camera when selection changes
+    cameraSelect.addEventListener('change', () => {
+      const selectedDeviceId = cameraSelect.value;
+      startCamera(selectedDeviceId);
+    });
 
     captureBtn.addEventListener('click', () => {
       canvas.width = video.videoWidth;
@@ -63,7 +116,6 @@
       ctx.drawImage(video, 0, 0);
 
       const imageData = canvas.toDataURL('image/png');
-
       preview.src = imageData;
       preview.style.display = 'block';
 
