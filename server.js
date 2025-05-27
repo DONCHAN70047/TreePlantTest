@@ -7,20 +7,19 @@ const PORT = 3000;
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(express.json({ limit: '20mb' }));
 
+
 app.post('/get-link', (req, res) => {
   const { image } = req.body;
+
   if (!image) {
-    console.log('No image received in request body');
     return res.status(400).json({ error: 'No image received.' });
   }
 
   console.log(`Received image of length: ${image.length}`);
 
   const pythonProcess = spawn('python', ['server.py']);
-
   let result = '';
   let errorOutput = '';
-
 
   pythonProcess.stdin.on('error', (err) => {
     console.error('Error writing to Python stdin:', err);
@@ -40,7 +39,6 @@ app.post('/get-link', (req, res) => {
   pythonProcess.on('close', (code) => {
     if (code !== 0) {
       console.error(`Python script exited with code ${code}`);
-      console.error(`Python script error output: ${errorOutput}`);
       if (!res.headersSent) {
         return res.status(500).json({ error: "Python script failed.", details: errorOutput });
       }
@@ -59,9 +57,22 @@ app.post('/get-link', (req, res) => {
     }
   });
 
-
   pythonProcess.stdin.write(image);
   pythonProcess.stdin.end();
+});
+
+
+app.post('/confirmation', (req, res) => {
+  const { image, confirmation } = req.body;
+
+  console.log("User confirmed:", confirmation);
+
+
+  res.json({
+    output: confirmation
+      ? "✅ Thank you! Your confirmation has been saved."
+      : "❌ Thanks! Your feedback has been noted."
+  });
 });
 
 app.listen(PORT, () => {
