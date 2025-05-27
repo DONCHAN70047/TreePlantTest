@@ -60,9 +60,8 @@
         });
         video.srcObject = stream;
       } catch (err) {
-        console.error("Camera error:", err);
+        console.warn("Back camera not found. Using default camera.");
         outputDiv.textContent = "Back camera not found. Using default camera.";
-        // fallback
         const stream = await navigator.mediaDevices.getUserMedia({ video: true });
         video.srcObject = stream;
       }
@@ -70,7 +69,7 @@
 
     startBackCamera();
 
-    captureBtn.addEventListener('click', () => {
+    captureBtn.addEventListener('click', async () => {
       canvas.width = video.videoWidth;
       canvas.height = video.videoHeight;
       ctx.drawImage(video, 0, 0);
@@ -81,19 +80,32 @@
 
       outputDiv.textContent = "Processing...";
 
-      fetch('/get-link', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ image: imageData })
-      })
-      .then(res => res.json())
-      .then(data => {
+      try {
+        const response = await fetch('/get-link', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ image: imageData })
+        });
+
+        const data = await response.json();
         outputDiv.textContent = data.output || "No output received";
-      })
-      .catch(err => {
-        console.error('Error:', err);
+
+
+        const userConfirmed = confirm(`${data.output}\n\nIs this prediction correct? Click OK for Yes, Cancel for No.`);
+
+
+        const confirmResponse = await fetch('/confirmation', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ image: imageData, confirmation: userConfirmed })
+        });
+
+        const confirmData = await confirmResponse.json();
+        outputDiv.textContent = confirmData.output || "Confirmation processed.";
+      } catch (error) {
+        console.error('Error:', error);
         outputDiv.textContent = "Error occurred while processing.";
-      });
+      }
     });
   </script>
 </body>
